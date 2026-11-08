@@ -78,7 +78,7 @@ export default function App(){
     const metres=distance({latitude,longitude},{latitude:Number(chat.latitude),longitude:Number(chat.longitude)});
     if(metres<=100){
      arrivalTriggered.current=true;
-     const result=await supabase.rpc('mihnati_mark_arrived',{p_booking_id:selectedBooking.id});
+     const result=await supabase.rpc('mihnati_mark_arrived_at_location',{p_booking_id:selectedBooking.id});
      if(!result.error){await loadAll();await notifyTelegram(selectedBooking.id);say('تم رصد وصولك إلى موقع العمل وإرسال إشعار الوصول.');}
      else{arrivalTriggered.current=false;say(niceError(result.error));}
     }
