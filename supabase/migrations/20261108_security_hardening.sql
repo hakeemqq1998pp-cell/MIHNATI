@@ -28,7 +28,7 @@ with check (
     select 1 from public.profiles p
     where p.id = auth.uid()
       and p.account_type = 'business'::public.account_type
-      and p.business_type = business_type
+      and p.business_type = jobs.business_type
   )
 );
 
