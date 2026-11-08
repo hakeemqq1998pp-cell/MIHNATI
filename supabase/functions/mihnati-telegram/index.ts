@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
   if (booking.status !== "agreed" || !booking.arrived_at) return reply({ error: "Arrival is not confirmed" }, 403);
 
   const [{ data: job, error: jobError }, { data: worker, error: workerError }] = await Promise.all([
-    admin.from("mihnati_jobs").select("business_name,job_title,location_text").eq("id", booking.job_id).single(),
+    admin.from("mihnati_jobs").select("business_type,business_name,job_title,location_text").eq("id", booking.job_id).single(),
     admin.from("mihnati_profiles").select("full_name,phone").eq("id", booking.worker_id).single(),
   ]);
   if (jobError || workerError || !job || !worker) return reply({ error: "Booking details unavailable" }, 500);
