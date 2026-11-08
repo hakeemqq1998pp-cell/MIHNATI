@@ -67,9 +67,11 @@ export default function App(){
   if(!selectedBooking||!chat||!bothSharing)return;
   if(!navigator.geolocation){setTrackingError('المتصفح لا يدعم تحديد الموقع.');return;}
   setTrackingError('');
-  const watch=navigator.geolocation.watchPosition(async pos=>{
-   const now=Date.now();if(now-lastSent.current<8000)return;lastSent.current=now;
-   const{latitude,longitude,accuracy}=pos.coords;
+  let latestPosition=null;
+  const pushLatest=async()=>{
+   if(!latestPosition)return;
+   const now=Date.now();if(now-lastSent.current<9000)return;lastSent.current=now;
+   const{latitude,longitude,accuracy}=latestPosition.coords;
    if(accuracy>250){setTrackingError('إشارة GPS ضعيفة حالياً؛ ننتظر دقة أفضل.');return;}
    const{error}=await supabase.rpc('mihnati_update_live_location',{p_booking_id:selectedBooking.id,p_latitude:latitude,p_longitude:longitude,p_accuracy_m:accuracy});
    if(error){setTrackingError(niceError(error));return;}
@@ -83,8 +85,10 @@ export default function App(){
      else{arrivalTriggered.current=false;say(niceError(result.error));}
     }
    }
-  },err=>{setTrackingError(err.code===1?'لم تسمح بإذن الموقع. فعّل الموقع للمتصفح واسمح بالمشاركة.':err.code===2?'تعذر تحديد موقعك حالياً.':'انتهت مهلة تحديد الموقع.');},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
-  return()=>navigator.geolocation.clearWatch(watch);
+  };
+  const watch=navigator.geolocation.watchPosition(pos=>{latestPosition=pos;},{err=>{setTrackingError(err.code===1?'لم تسمح بإذن الموقع. فعّل الموقع للمتصفح واسمح بالمشاركة.':err.code===2?'تعذر تحديد موقعك حالياً.':'انتهت مهلة تحديد الموقع.');},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+  const timer=window.setInterval(()=>{void pushLatest();},10000);
+  return()=>{navigator.geolocation.clearWatch(watch);window.clearInterval(timer);};
  },[selectedBooking?.id,bothSharing,chat?.id,profile?.account_type,selectedBooking?.arrived_at]);
  async function authSubmit(e){
   e.preventDefault();if(!supabase)return say('إعدادات Supabase غير موجودة');setBusy(true);
