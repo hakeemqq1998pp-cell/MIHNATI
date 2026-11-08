@@ -16,6 +16,7 @@ drop policy if exists "jobs read" on public.jobs;
 drop policy if exists "messages parties read" on public.messages;
 drop policy if exists "messages parties send" on public.messages;
 
+create policy "users can read own profile" on public.profiles for select to authenticated using(id=auth.uid());
 create policy "authenticated can read jobs" on public.jobs for select to authenticated using(true);
 create policy "business owners can insert jobs" on public.jobs for insert to authenticated
 with check(owner_id=auth.uid() and exists(select 1 from public.profiles p where p.id=auth.uid() and p.account_type='business'));
