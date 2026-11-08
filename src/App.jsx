@@ -8,7 +8,7 @@ const[session,setSession]=useState(null),[profile,setProfile]=useState(null),[jo
 const[auth,setAuth]=useState({email:'',password:'',name:'',phone:'',location:'',type:'worker',kind:'oven',business:''});
 const[form,setForm]=useState({kind:'oven',business:'',role:'',wage:'',time:'نهاري',shift:'يوم كامل',location:'',details:''}),[draft,setDraft]=useState('');
 const say=t=>{setNotice(t);window.setTimeout(()=>setNotice(''),4500)};
-async function loadAll(){if(!supabase||!session)return;setBusy(true);try{let p=await supabase.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
+async function loadAll(){if(!supabase||!session)return;setBusy(true);try{let p=await supabase.from('profiles').select('id,account_type,full_name,phone,location_text,business_type,business_name,created_at').eq('id',session.user.id).maybeSingle();
 if(p.error)throw p.error;
 if(!p.data){
  const m=session.user.user_metadata||{};
