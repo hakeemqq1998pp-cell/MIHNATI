@@ -34,3 +34,7 @@ create table if not exists public.mihnati_notification_events(
 alter table public.mihnati_notification_events enable row level security;
 revoke all on public.mihnati_notification_events from anon,authenticated;
 grant all on public.mihnati_notification_events to service_role;
+
+-- Explicitly deny client-role access; the server-side service role bypasses RLS.
+drop policy if exists mihnati_notification_events_deny_clients on public.mihnati_notification_events;
+create policy mihnati_notification_events_deny_clients on public.mihnati_notification_events as restrictive for all to anon,authenticated using(false) with check(false);
