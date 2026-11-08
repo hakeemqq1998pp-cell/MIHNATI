@@ -91,7 +91,7 @@ export default function App(){
   return()=>{navigator.geolocation.clearWatch(watch);window.clearInterval(timer);};
  },[selectedBooking?.id,bothSharing,chat?.id,profile?.account_type,selectedBooking?.arrived_at]);
  async function authSubmit(e){
-  e.preventDefault();if(!supabase)return say('إعدادات Supabase غير موجودة');if(authMode==='signup'&&auth.name.trim().split(/\\s+/).length<3)return say('أدخل الاسم الثلاثي كاملاً.');setBusy(true);
+  e.preventDefault();if(!supabase)return say('إعدادات Supabase غير موجودة');if(authMode==='signup'&&auth.name.trim().split(/\s+/).length<3)return say('أدخل الاسم الثلاثي كاملاً.');setBusy(true);
   try{
    if(authMode==='signup'){
     const metadata={full_name:auth.name.trim(),phone:auth.phone.trim(),location_text:auth.location.trim(),account_type:auth.type,...(auth.type==='business'?{business_type:auth.kind,business_name:auth.business.trim()}:{})};
