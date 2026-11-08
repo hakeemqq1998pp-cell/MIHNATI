@@ -178,7 +178,7 @@ begin
   execute format('revoke all on table %I.%I from anon,authenticated',r.schemaname,r.tablename);
  end loop;
 end $$;
-revoke all on function public.handle_new_user() from public,anon,authenticated;
+do $ begin\n if to_regprocedure('public.handle_new_user()') is not null then\n  revoke all on function public.handle_new_user() from public,anon,authenticated;\n end if;\nend $;
 
 do $$ begin alter publication supabase_realtime add table public.mihnati_jobs; exception when duplicate_object then null; when undefined_object then null; end $$;
 do $$ begin alter publication supabase_realtime add table public.mihnati_bookings; exception when duplicate_object then null; when undefined_object then null; end $$;
