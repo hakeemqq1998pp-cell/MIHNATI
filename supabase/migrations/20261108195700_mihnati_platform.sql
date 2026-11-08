@@ -178,7 +178,25 @@ begin
   execute format('revoke all on table %I.%I from anon,authenticated',r.schemaname,r.tablename);
  end loop;
 end $$;
-do $ begin\n if to_regprocedure('public.handle_new_user()') is not null then\n  revoke all on function public.handle_new_user() from public,anon,authenticated;\n end if;\nend $;
+do $ begin\n if to_regprocedure('public.handle_new_user()') is not null then\n  -- Keep the pre-existing Auth trigger compatible with the business role used by this app.
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path=''
+as $
+declare
+ v_account text := coalesce(new.raw_user_meta_data->>'account_type','worker');
+ v_type public.account_type;
+ v_name text := coalesce(nullif(trim(new.raw_user_meta_data->>'full_name'),''),split_part(coalesce(new.email,''),'@',1),'مستخدم');
+ v_phone text := nullif(trim(new.raw_user_meta_data->>'phone'),'');
+begin
+ if v_account not in ('worker','business') then raise exception 'نوع الحساب غير صالح'; end if;
+ v_type := case when v_account='business' then 'employer'::public.account_type else 'worker'::public.account_type end;
+ insert into public.users(id,email,full_name,phone,account_type)
+ values(new.id,new.email,v_name,v_phone,v_type)
+ on conflict(id) do update set email=excluded.email,full_name=excluded.full_name,phone=excluded.phone,account_type=excluded.account_type,updated_at=now();
+ return new;
+end;
+$;
+revoke all on function public.handle_new_user() from public,anon,authenticated;\n end if;\nend $;
 
 do $$ begin alter publication supabase_realtime add table public.mihnati_jobs; exception when duplicate_object then null; when undefined_object then null; end $$;
 do $$ begin alter publication supabase_realtime add table public.mihnati_bookings; exception when duplicate_object then null; when undefined_object then null; end $$;
