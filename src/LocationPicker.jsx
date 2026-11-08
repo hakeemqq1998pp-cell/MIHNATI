@@ -18,7 +18,8 @@ export default function LocationPicker({value,onChange}){
   return()=>{m.remove();map.current=null;marker.current=null;};
  },[]);
  useEffect(()=>{
-  const m=map.current;if(!m||!value)return;
+  const m=map.current;if(!m)return;
+  if(!value){if(marker.current){m.removeLayer(marker.current);marker.current=null;}return;}
   const coords=[Number(value.latitude),Number(value.longitude)];
   if(!marker.current)marker.current=L.marker(coords).addTo(m);
   else marker.current.setLatLng(coords);
