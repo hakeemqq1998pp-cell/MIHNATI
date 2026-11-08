@@ -86,7 +86,7 @@ export default function App(){
     }
    }
   };
-  const watch=navigator.geolocation.watchPosition(pos=>{latestPosition=pos;},{err=>{setTrackingError(err.code===1?'لم تسمح بإذن الموقع. فعّل الموقع للمتصفح واسمح بالمشاركة.':err.code===2?'تعذر تحديد موقعك حالياً.':'انتهت مهلة تحديد الموقع.');},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
+  const watch=navigator.geolocation.watchPosition(pos=>{latestPosition=pos;},err=>{setTrackingError(err.code===1?'لم تسمح بإذن الموقع. فعّل الموقع للمتصفح واسمح بالمشاركة.':err.code===2?'تعذر تحديد موقعك حالياً.':'انتهت مهلة تحديد الموقع.');},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});
   const timer=window.setInterval(()=>{void pushLatest();},10000);
   return()=>{navigator.geolocation.clearWatch(watch);window.clearInterval(timer);};
  },[selectedBooking?.id,bothSharing,chat?.id,profile?.account_type,selectedBooking?.arrived_at]);
