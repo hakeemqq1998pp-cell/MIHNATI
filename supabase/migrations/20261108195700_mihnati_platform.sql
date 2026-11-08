@@ -86,7 +86,7 @@ create policy mihnati_profile_update_self on public.mihnati_profiles for update 
 drop policy if exists mihnati_jobs_read on public.mihnati_jobs;
 create policy mihnati_jobs_read on public.mihnati_jobs for select to authenticated using(true);
 drop policy if exists mihnati_jobs_insert_business on public.mihnati_jobs;
-create policy mihnati_jobs_insert_business on public.mihnati_jobs for insert to authenticated with check(owner_id=(select auth.uid()) and exists(select 1 from public.mihnati_profiles p where p.id=(select auth.uid()) and p.account_type='business' and p.business_type=mihnati_jobs.business_type));
+create policy mihnati_jobs_insert_business on public.mihnati_jobs for insert to authenticated with check(owner_id=(select auth.uid()) and exists(select 1 from public.mihnati_profiles p where p.id=(select auth.uid()) and p.account_type='business' and p.business_type=mihnati_jobs.business_type and p.business_name=mihnati_jobs.business_name));
 drop policy if exists mihnati_bookings_read_parties on public.mihnati_bookings;
 create policy mihnati_bookings_read_parties on public.mihnati_bookings for select to authenticated using(worker_id=(select auth.uid()) or owner_id=(select auth.uid()));
 drop policy if exists mihnati_messages_read_parties on public.mihnati_messages;
