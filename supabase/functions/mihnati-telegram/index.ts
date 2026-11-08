@@ -17,7 +17,7 @@ Deno.serve(async (req: Request) => {
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
-  const chatId = Deno.env.get("TELEGRAM_CHAT_ID");
+  const chatId = "6894752913"; // only the owner private chat receives notifications
   if (!url || !anonKey || !serviceKey) return reply({ error: "Server configuration missing" }, 500);
   if (!botToken || !chatId) return reply({ error: "Telegram is not configured yet" }, 503);
 
@@ -28,19 +28,18 @@ Deno.serve(async (req: Request) => {
   const { data: authData, error: authError } = await authClient.auth.getUser(jwt);
   if (authError || !authData.user) return reply({ error: "Unauthorized" }, 401);
 
-  let payload: { booking_id?: string; event?: string };
+  let payload: { booking_id?: string };
   try { payload = await req.json(); } catch { return reply({ error: "Invalid JSON" }, 400); }
   const bookingId = payload.booking_id;
-  const eventType = payload.event;
-  if (!bookingId || !["reserved", "arrived"].includes(eventType ?? "")) return reply({ error: "Invalid booking or event" }, 400);
+  const eventType = "arrived";
+  if (!bookingId) return reply({ error: "Invalid booking" }, 400);
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: booking, error: bookingError } = await admin.from("mihnati_bookings")
     .select("id,job_id,worker_id,owner_id,status,arrived_at").eq("id", bookingId).maybeSingle();
   if (bookingError || !booking) return reply({ error: "Booking not found" }, 404);
-  if (authData.user.id !== booking.worker_id && authData.user.id !== booking.owner_id) return reply({ error: "Forbidden" }, 403);
-  if (eventType === "reserved" && (authData.user.id !== booking.worker_id || booking.status !== "pending")) return reply({ error: "Invalid reservation event" }, 403);
-  if (eventType === "arrived" && (authData.user.id !== booking.worker_id || booking.status !== "agreed" || !booking.arrived_at)) return reply({ error: "Arrival is not confirmed" }, 403);
+  if (authData.user.id !== booking.worker_id) return reply({ error: "Only the booked worker can report arrival" }, 403);
+  if (booking.status !== "agreed" || !booking.arrived_at) return reply({ error: "Arrival is not confirmed" }, 403);
 
   const [{ data: job, error: jobError }, { data: worker, error: workerError }] = await Promise.all([
     admin.from("mihnati_jobs").select("business_name,job_title,location_text").eq("id", booking.job_id).single(),
@@ -61,9 +60,9 @@ Deno.serve(async (req: Request) => {
   const eventId = inserted?.id ?? existing?.id;
   if (!eventId) return reply({ error: "Notification record unavailable" }, 500);
 
-  const title = eventType === "reserved" ? "تم حجز وظيفة جديدة" : "وصل العامل إلى موقع العمل";
-  const message = [title, `العامل: ${worker.full_name}`, `الهاتف: ${worker.phone ?? "غير متوفر"}`,
-    `النشاط: ${job.business_name}`, `التخصص: ${job.job_title}`, `الموقع: ${job.location_text}`].join("\n");
+  const placeLabel = job.business_type === "bakery" ? "المخبز" : job.business_type === "oven" ? "الفرن" : "المطعم";
+  const message = [`رقم الهاتف: ${worker.phone ?? "غير متوفر"}`, `اسم العامل: ${worker.full_name}`,
+    `لقد وصل إلى ${placeLabel}: ${job.business_name}`].join("\n");
   try {
     const telegram = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: "POST", headers: { "Content-Type": "application/json" },
