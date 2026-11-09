@@ -1,4 +1,4 @@
-name: Deploy Mihnati to GitHub Pages
+name: Validate Mihnati build (Netlify deployment)
 
 on:
   push:
@@ -7,43 +7,26 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: mihnati-build
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v5
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
 
-      - name: Install app dependencies
-        run: npm install --no-save vite@6 react@19 react-dom@19 lucide-react @supabase/supabase-js leaflet
+      - name: Install dependencies
+        run: npm install
 
-      - name: Build for GitHub Pages project path
-        run: npx vite build --base=/MIHNATI/
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Build application
+        run: npm run build
