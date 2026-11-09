@@ -7,7 +7,7 @@ const ENCRYPTION_SECRET = Deno.env.get("NATIONAL_ID_ENCRYPTION_KEY") ?? "";
 const LOOKUP_PEPPER = Deno.env.get("NATIONAL_ID_LOOKUP_PEPPER") ?? "";
 const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
 const TELEGRAM_CHAT_ID = "6894752913";
-const ALLOWED_ORIGINS = new Set(["https://mihnati1.netlify.app", "http://localhost:5173", "http://127.0.0.1:5173"]);
+const ALLOWED_ORIGINS = new Set(["https://mihnati1.netlify.app", "https://mihnati.pages.dev", "https://mihnati1.pages.dev", "http://localhost:5173", "http://127.0.0.1:5173"]);
 
 const originAllowed = (origin: string | null) => !origin || ALLOWED_ORIGINS.has(origin);
 const corsHeaders = (origin: string | null) => ({
