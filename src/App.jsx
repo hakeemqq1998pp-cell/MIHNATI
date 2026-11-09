@@ -140,6 +140,7 @@ export default function App(){
   </>}
   <label>البريد الإلكتروني<input type="email" autoComplete="email" required value={auth.email} onChange={e=>setAuth({...auth,email:e.target.value})}/></label>
   <label>كلمة المرور<input type="password" autoComplete={authMode==='signup'?'new-password':'current-password'} minLength="6" required value={auth.password} onChange={e=>setAuth({...auth,password:e.target.value})}/></label>
+  {authMode==='login'&&<a className="light" href="https://wa.me/9647866360986?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D9%86%D8%B3%D9%8A%D8%AA%20%D9%83%D9%84%D9%85%D8%A9%20%D9%85%D8%B1%D9%88%D8%B1%D9%8A%20%D9%81%D9%8A%20%D9%85%D9%86%D8%B5%D8%A9%20%D9%85%D9%90%D9%87%D9%86%D8%AA%D9%8A" target="_blank" rel="noreferrer">نسيت كلمة المرور؟ تواصل مع صاحب المنصة عبر واتساب</a>}
   <button className="primary" disabled={busy}>{busy?'يرجى الانتظار':'متابعة'}</button>
  </form>{notice&&<p>{notice}</p>}</main>;
  if(!profile)return <main className="auth"><div className="panel stack"><h2>تهيئة الحساب</h2><p>تعذر تحميل ملف المستخدم. أعد المحاولة.</p><button className="primary" onClick={loadAll}>إعادة المحاولة</button><button onClick={()=>supabase.auth.signOut()}>تسجيل الخروج</button></div>{notice}</main>;
