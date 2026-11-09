@@ -14,7 +14,7 @@ const distance=(a,b)=>{const r=x=>x*Math.PI/180, dLat=r(b.latitude-a.latitude),d
 const niceError=e=>e?.message||'حدث خطأ غير متوقع';
 
 export default function App(){
- const[session,setSession]=useState(null),[profile,setProfile]=useState(null),[jobs,setJobs]=useState([]),[bookings,setBookings]=useState([]),[messages,setMessages]=useState([]),[liveLocations,setLiveLocations]=useState([]),[tab,setTab]=useState('jobs'),[chat,setChat]=useState(null),[filter,setFilter]=useState('all'),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[authMode,setAuthMode]=useState('login'),[contact,setContact]=useState(null),[phoneEdit,setPhoneEdit]=useState(''),[trackingError,setTrackingError]=useState('');
+ const[session,setSession]=useState(null),[profile,setProfile]=useState(null),[jobs,setJobs]=useState([]),[bookings,setBookings]=useState([]),[messages,setMessages]=useState([]),[liveLocations,setLiveLocations]=useState([]),[tab,setTab]=useState('jobs'),[chat,setChat]=useState(null),[filter,setFilter]=useState('all'),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[authMode,setAuthMode]=useState('login'),[authMethod,setAuthMethod]=useState('national'),[contact,setContact]=useState(null),[phoneEdit,setPhoneEdit]=useState(''),[trackingError,setTrackingError]=useState('');
  const[auth,setAuth]=useState({email:'',nationalId:'',password:'',name:'',type:'worker',kind:'oven',business:''});
  const[form,setForm]=useState({kind:'oven',business:'',role:'',wage:'',time:'نهاري',shift:'يوم كامل',location:'',details:''});
  const[point,setPoint]=useState(null),[draft,setDraft]=useState('');
