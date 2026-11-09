@@ -38,7 +38,7 @@ export default function App(){
   if(!supabase||!session)return;
   setBusy(true);
   try{
-   const p=await supabase.from('mihnati_profiles').select('*').eq('id',session.user.id).maybeSingle();
+   const p=await supabase.from('mihnati_profiles').select('id,account_type,full_name,phone,location_text,business_type,business_name,created_at').eq('id',session.user.id).maybeSingle();
    if(p.error)throw p.error;
    if(!p.data){
     const m=session.user.user_metadata||{};
