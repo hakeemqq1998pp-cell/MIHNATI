@@ -152,7 +152,7 @@ export default function App(){
  const ownerLoc=liveLocations.find(x=>x.user_id===selectedBooking?.owner_id);
  const destination=chat?.latitude!=null&&chat?.longitude!=null?{latitude:chat.latitude,longitude:chat.longitude}:null;
  const mineSharing=selectedBooking&&(profile?.account_type==='worker'?selectedBooking.worker_location_sharing:selectedBooking.owner_location_sharing);
- if(!supabase)return <main className="auth"><div className="logo">م</div><h1>مِهنتي</h1><section className="panel"><h3>إعداد الاتصال بقاعدة البيانات</h3><p>أضف VITE_SUPABASE_URL وVITE_SUPABASE_ANON_KEY في إعدادات Netlify ثم أعد النشر.</p></section></main>;
+ if(!supabase)return <main className="auth"><div className="logo">م</div><h1>مِهنتي</h1><section className="panel"><h3>نعتذر، الخدمة غير متاحة مؤقتاً</h3><p>نعمل على إعادة الاتصال. يرجى المحاولة بعد قليل.</p></section></main>;
  if(!session)return <main className="auth"><div className="logo">م</div><h1>مِهنتي</h1><p>منصة فرص العمل</p><form className="panel stack" onSubmit={authSubmit}>
   <div className="switch"><button type="button" className={authMode==='login'?'on':''} onClick={()=>setAuthMode('login')}>دخول</button><button type="button" className={authMode==='signup'?'on':''} onClick={()=>{setAuthMode('signup');setAuthMethod('national');}}>حساب جديد</button></div>
   {authMode==='signup'&&<><label>نوع الحساب<select value={auth.type} onChange={e=>setAuth({...auth,type:e.target.value})}><option value="worker">عامل</option><option value="business">حساب تجاري</option></select></label>
