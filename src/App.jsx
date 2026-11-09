@@ -15,7 +15,7 @@ const niceError=e=>e?.message||'حدث خطأ غير متوقع';
 
 export default function App(){
  const[session,setSession]=useState(null),[profile,setProfile]=useState(null),[jobs,setJobs]=useState([]),[bookings,setBookings]=useState([]),[messages,setMessages]=useState([]),[liveLocations,setLiveLocations]=useState([]),[tab,setTab]=useState('jobs'),[chat,setChat]=useState(null),[filter,setFilter]=useState('all'),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[authMode,setAuthMode]=useState('login'),[contact,setContact]=useState(null),[phoneEdit,setPhoneEdit]=useState(''),[trackingError,setTrackingError]=useState('');
- const[auth,setAuth]=useState({email:'',password:'',name:'',phone:'',location:'',type:'worker',kind:'oven',business:''});
+ const[auth,setAuth]=useState({email:'',nationalId:'',password:'',name:'',type:'worker',kind:'oven',business:''});
  const[form,setForm]=useState({kind:'oven',business:'',role:'',wage:'',time:'نهاري',shift:'يوم كامل',location:'',details:''});
  const[point,setPoint]=useState(null),[draft,setDraft]=useState('');
  const lastSent=useRef(0),arrivalTriggered=useRef(false);
@@ -30,7 +30,7 @@ export default function App(){
    if(!p.data){
     const m=session.user.user_metadata||{};
     const row={id:session.user.id,account_type:m.account_type,full_name:m.full_name,phone:m.phone,location_text:m.location_text,...(m.account_type==='business'?{business_type:m.business_type,business_name:m.business_name}:{})};
-    if(!row.account_type||!row.full_name||!row.phone||!row.location_text)throw Error('بيانات الحساب غير مكتملة. سجّل الخروج ثم أكمل التسجيل من جديد.');
+    if(!row.account_type||!row.full_name)throw Error('بيانات الحساب غير مكتملة. تواصل مع دعم المنصة.');
     const ins=await supabase.from('mihnati_profiles').insert(row).select().single();if(ins.error)throw ins.error;p.data=ins.data;
    }
    setProfile(p.data);setPhoneEdit(p.data.phone||'');
@@ -92,14 +92,24 @@ export default function App(){
   return()=>{navigator.geolocation.clearWatch(watch);window.clearInterval(timer);};
  },[selectedBooking?.id,bothSharing,chat?.id,profile?.account_type,selectedBooking?.arrived_at]);
  async function authSubmit(e){
-  e.preventDefault();if(!supabase)return say('إعدادات Supabase غير موجودة');if(authMode==='signup'&&auth.name.trim().split(/\s+/).length<3)return say('أدخل الاسم الثلاثي كاملاً.');setBusy(true);
+  e.preventDefault();if(!supabase)return say('إعدادات Supabase غير موجودة');
+  if(authMode==='signup'&&auth.name.trim().split(/\s+/).length<3)return say('أدخل الاسم الثلاثي كاملاً.');
+  setBusy(true);
   try{
    if(authMode==='signup'){
-    const metadata={full_name:auth.name.trim(),phone:auth.phone.trim(),location_text:auth.location.trim(),account_type:auth.type,...(auth.type==='business'?{business_type:auth.kind,business_name:auth.business.trim()}:{})};
-    const{data,error}=await supabase.auth.signUp({email:auth.email.trim(),password:auth.password,options:{data:metadata}});if(error)throw error;if(!data.user)throw Error('تعذر إنشاء الحساب');
-    if(!data.session){say('تم إنشاء الحساب. تحقق من بريدك الإلكتروني ثم سجّل الدخول.');setAuthMode('login');return;}
-    say('تم إنشاء الحساب.');
-   }else{const{error}=await supabase.auth.signInWithPassword({email:auth.email.trim(),password:auth.password});if(error)throw error;}
+    const payload={action:'signup',full_name:auth.name.trim(),national_id:auth.nationalId.trim(),password:auth.password,account_type:auth.type,...(auth.type==='business'?{business_type:auth.kind,business_name:auth.business.trim()}:{})};
+    const{data,error}=await supabase.functions.invoke('mihnati-auth',{body:payload});if(error)throw error;
+    if(data?.session){const{error:setError}=await supabase.auth.setSession(data.session);if(setError)throw setError;}
+    else if(data?.ok){say(data.message||'تم إنشاء الحساب. سجّل الدخول بالرقم الوطني وكلمة المرور.');setAuthMode('login');return;}
+    else throw Error(data?.error||'تعذر إنشاء الحساب.');
+    say(data.telegram_sent===false?'تم إنشاء الحساب، لكن تعذر إرسال إشعار تيليغرام.':'تم إنشاء الحساب وإرسال إشعار العضو الجديد.');
+   }else if(authMethod==='legacy'){
+    const{error}=await supabase.auth.signInWithPassword({email:auth.email.trim(),password:auth.password});if(error)throw error;
+   }else{
+    const{data,error}=await supabase.functions.invoke('mihnati-auth',{body:{action:'login',national_id:auth.nationalId.trim(),password:auth.password}});if(error)throw error;
+    if(!data?.session)throw Error(data?.error||'الرقم الوطني أو كلمة المرور غير صحيحة.');
+    const{error:setError}=await supabase.auth.setSession(data.session);if(setError)throw setError;
+   }
   }catch(e){say(niceError(e));}finally{setBusy(false);}
  }
  async function publish(e){
@@ -131,16 +141,18 @@ export default function App(){
  const mineSharing=selectedBooking&&(profile?.account_type==='worker'?selectedBooking.worker_location_sharing:selectedBooking.owner_location_sharing);
  if(!supabase)return <main className="auth"><div className="logo">م</div><h1>مِهنتي</h1><section className="panel"><h3>إعداد الاتصال بقاعدة البيانات</h3><p>أضف VITE_SUPABASE_URL وVITE_SUPABASE_ANON_KEY في إعدادات Netlify ثم أعد النشر.</p></section></main>;
  if(!session)return <main className="auth"><div className="logo">م</div><h1>مِهنتي</h1><p>منصة فرص العمل</p><form className="panel stack" onSubmit={authSubmit}>
-  <div className="switch"><button type="button" className={authMode==='login'?'on':''} onClick={()=>setAuthMode('login')}>دخول</button><button type="button" className={authMode==='signup'?'on':''} onClick={()=>setAuthMode('signup')}>حساب جديد</button></div>
+  <div className="switch"><button type="button" className={authMode==='login'?'on':''} onClick={()=>setAuthMode('login')}>دخول</button><button type="button" className={authMode==='signup'?'on':''} onClick={()=>{setAuthMode('signup');setAuthMethod('national');}}>حساب جديد</button></div>
   {authMode==='signup'&&<><label>نوع الحساب<select value={auth.type} onChange={e=>setAuth({...auth,type:e.target.value})}><option value="worker">عامل</option><option value="business">حساب تجاري</option></select></label>
-   <label>الاسم الكامل الثلاثي<input required maxLength="120" value={auth.name} onChange={e=>setAuth({...auth,name:e.target.value})}/></label>
-   <label>{auth.type==='business'?'رقم هاتف صاحب العمل':'رقم هاتف العامل'}<input required type="tel" autoComplete="tel" maxLength="40" value={auth.phone} onChange={e=>setAuth({...auth,phone:e.target.value})} placeholder="07xxxxxxxxx"/></label>
-   <label>الموقع / المنطقة<input required maxLength="250" value={auth.location} onChange={e=>setAuth({...auth,location:e.target.value})}/></label>
+   <label>الاسم الثلاثي<input required maxLength="120" autoComplete="name" value={auth.name} onChange={e=>setAuth({...auth,name:e.target.value})} placeholder="الاسم الثلاثي"/></label>
+   <label>رقم الهوية الوطنية<input required inputMode="numeric" autoComplete="off" maxLength="24" value={auth.nationalId} onChange={e=>setAuth({...auth,nationalId:e.target.value})} placeholder="أدخل الرقم الوطني"/></label>
    {auth.type==='business'&&<><label>نوع النشاط<select value={auth.kind} onChange={e=>setAuth({...auth,kind:e.target.value})}>{Object.entries(TYPES).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</select></label><label>اسم المنشأة<input required maxLength="160" value={auth.business} onChange={e=>setAuth({...auth,business:e.target.value})}/></label></>}
   </>}
-  <label>البريد الإلكتروني<input type="email" autoComplete="email" required value={auth.email} onChange={e=>setAuth({...auth,email:e.target.value})}/></label>
-  <label>كلمة المرور<input type="password" autoComplete={authMode==='signup'?'new-password':'current-password'} minLength="6" required value={auth.password} onChange={e=>setAuth({...auth,password:e.target.value})}/></label>
-  {authMode==='login'&&<a className="light" href="https://wa.me/9647866360986?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D9%86%D8%B3%D9%8A%D8%AA%20%D9%83%D9%84%D9%85%D8%A9%20%D9%85%D8%B1%D9%88%D8%B1%D9%8A%20%D9%81%D9%8A%20%D9%85%D9%86%D8%B5%D8%A9%20%D9%85%D9%90%D9%87%D9%86%D8%AA%D9%8A" target="_blank" rel="noreferrer">نسيت كلمة المرور؟ تواصل مع صاحب المنصة عبر واتساب</a>}
+  {authMode==='login'&&<>{authMethod==='legacy'?<label>البريد الإلكتروني<input type="email" autoComplete="username" required value={auth.email} onChange={e=>setAuth({...auth,email:e.target.value})}/></label>:<label>رقم الهوية الوطنية<input required inputMode="numeric" autoComplete="username" maxLength="24" value={auth.nationalId} onChange={e=>setAuth({...auth,nationalId:e.target.value})} placeholder="أدخل الرقم الوطني"/></label>}
+   <button type="button" className="light" onClick={()=>setAuthMethod(authMethod==='legacy'?'national':'legacy')}>{authMethod==='legacy'?'الدخول بالرقم الوطني':'دخول الحسابات القديمة بالبريد الإلكتروني'}</button>
+   <a className="light" href="https://wa.me/9647866360986?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D9%86%D8%B3%D9%8A%D8%AA%20%D9%83%D9%84%D9%85%D8%A9%20%D9%85%D8%B1%D9%88%D8%B1%D9%8A%20%D9%81%D9%8A%20%D9%85%D9%86%D8%B5%D8%A9%20%D9%85%D9%90%D9%87%D9%86%D8%AA%D9%8A" target="_blank" rel="noreferrer">نسيت كلمة المرور؟ تواصل مع صاحب المنصة 07866360986</a>
+  </>}
+  <label>كلمة المرور<input type="password" autoComplete={authMode==='signup'?'new-password':'current-password'} minLength="8" maxLength="72" required value={auth.password} onChange={e=>setAuth({...auth,password:e.target.value})}/></label>
+  {authMode==='signup'&&<p className="muted">الرقم الوطني مشفّر على الخادم. لا نرسل كلمة المرور إلى تيليغرام.</p>}
   <button className="primary" disabled={busy}>{busy?'يرجى الانتظار':'متابعة'}</button>
  </form>{notice&&<p>{notice}</p>}</main>;
  if(!profile)return <main className="auth"><div className="panel stack"><h2>تهيئة الحساب</h2><p>تعذر تحميل ملف المستخدم. أعد المحاولة.</p><button className="primary" onClick={loadAll}>إعادة المحاولة</button><button onClick={()=>supabase.auth.signOut()}>تسجيل الخروج</button></div>{notice}</main>;
