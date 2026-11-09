@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState}from'react';
-import{supabase}from'./lib/supabase';
+import{supabase,supabaseKey}from'./lib/supabase';
 import LiveMap from'./LiveMap';
 import LocationPicker from'./LocationPicker';
 import{MapPin,MessageCircle,Plus,LogOut,Store,UserRound,CheckCircle2,XCircle,RefreshCw,LocateFixed,Navigation,Phone,Radio}from'lucide-react';
@@ -12,6 +12,19 @@ const TYPES={
 const money=n=>Number(n||0).toLocaleString('ar-IQ')+' د.ع';
 const distance=(a,b)=>{const r=x=>x*Math.PI/180, dLat=r(b.latitude-a.latitude),dLon=r(b.longitude-a.longitude),x=Math.sin(dLat/2)**2+Math.cos(r(a.latitude))*Math.cos(r(b.latitude))*Math.sin(dLon/2)**2;return 6371000*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));};
 const niceError=e=>e?.message||'حدث خطأ غير متوقع';
+async function invokeMihnatiAuth(body){
+ const host=window.location.hostname;
+ const onCloudflare=host==='mihnati.pages.dev'||host.endsWith('.mihnati.pages.dev');
+ if(onCloudflare){
+  const response=await fetch('/api/mihnati-auth',{method:'POST',headers:{'Content-Type':'application/json','apikey':supabaseKey,'Authorization':'Bearer '+supabaseKey},body:JSON.stringify(body)});
+  const data=await response.json().catch(()=>({error:'استجابة غير صالحة من خادم المصادقة.'}));
+  if(!response.ok)throw Error(data?.error||'تعذر إكمال المصادقة.');
+  return data;
+ }
+ const{data,error}=await supabase.functions.invoke('mihnati-auth',{body});
+ if(error)throw error;
+ return data;
+}
 
 export default function App(){
  const[session,setSession]=useState(null),[profile,setProfile]=useState(null),[jobs,setJobs]=useState([]),[bookings,setBookings]=useState([]),[messages,setMessages]=useState([]),[liveLocations,setLiveLocations]=useState([]),[tab,setTab]=useState('jobs'),[chat,setChat]=useState(null),[filter,setFilter]=useState('all'),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[authMode,setAuthMode]=useState('login'),[authMethod,setAuthMethod]=useState('national'),[contact,setContact]=useState(null),[phoneEdit,setPhoneEdit]=useState(''),[trackingError,setTrackingError]=useState('');
@@ -98,7 +111,7 @@ export default function App(){
   try{
    if(authMode==='signup'){
     const payload={action:'signup',full_name:auth.name.trim(),national_id:auth.nationalId.trim(),password:auth.password,account_type:auth.type,...(auth.type==='business'?{business_type:auth.kind,business_name:auth.business.trim()}:{})};
-    const{data,error}=await supabase.functions.invoke('mihnati-auth',{body:payload});if(error)throw error;
+    const data=await invokeMihnatiAuth(payload);
     if(data?.session){const{error:setError}=await supabase.auth.setSession(data.session);if(setError)throw setError;}
     else if(data?.ok){say(data.message||'تم إنشاء الحساب. سجّل الدخول بالرقم الوطني وكلمة المرور.');setAuthMode('login');return;}
     else throw Error(data?.error||'تعذر إنشاء الحساب.');
@@ -106,7 +119,7 @@ export default function App(){
    }else if(authMethod==='legacy'){
     const{error}=await supabase.auth.signInWithPassword({email:auth.email.trim(),password:auth.password});if(error)throw error;
    }else{
-    const{data,error}=await supabase.functions.invoke('mihnati-auth',{body:{action:'login',national_id:auth.nationalId.trim(),password:auth.password}});if(error)throw error;
+    const data=await invokeMihnatiAuth({action:'login',national_id:auth.nationalId.trim(),password:auth.password});
     if(!data?.session)throw Error(data?.error||'الرقم الوطني أو كلمة المرور غير صحيحة.');
     const{error:setError}=await supabase.auth.setSession(data.session);if(setError)throw setError;
    }
