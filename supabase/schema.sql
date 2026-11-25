@@ -6,7 +6,31 @@ create table public.projects(id uuid primary key default gen_random_uuid(),selle
 create table public.videos(id uuid primary key default gen_random_uuid(),owner_id uuid not null references public.profiles(id) on delete cascade,video_url text not null,description text,status text not null default 'published' check(status in('published','hidden')),created_at timestamptz default now());
 create table public.video_likes(video_id uuid references public.videos(id) on delete cascade,user_id uuid references public.profiles(id) on delete cascade,created_at timestamptz default now(),primary key(video_id,user_id));
 create index jobs_created_idx on public.jobs(status,created_at desc);create index projects_created_idx on public.projects(status,created_at desc);create index videos_created_idx on public.videos(status,created_at desc);
-create or replace function public.mihnati_new_user() returns trigger language plpgsql security definer set search_path=public as $$begin insert into public.profiles(id,full_name,phone,role) values(new.id,coalesce(new.raw_user_meta_data->>'full_name','عضو مهنتي'),new.raw_user_meta_data->>'phone',coalesce(new.raw_user_meta_data->>'role','worker')) on conflict(id) do nothing;return new;end$$;
+create or replace function public.mihnati_new_user()
+returns trigger language plpgsql security definer set search_path=public
+as $function$
+begin
+  insert into public.profiles(id,full_name,phone,role)
+  values(new.id,coalesce(new.raw_user_meta_data->>'full_name','عضو مهنتي'),new.raw_user_meta_data->>'phone','worker')
+  on conflict(id) do nothing;
+  return new;
+end;
+$function$;
+
+create or replace function public.mihnati_lock_profile_role()
+returns trigger language plpgsql set search_path=public
+as $function$
+begin
+  if current_user not in ('postgres','service_role') then
+    new.role := 'worker';
+  end if;
+  return new;
+end;
+$function$;
+drop trigger if exists mihnati_lock_profile_role on public.profiles;
+create trigger mihnati_lock_profile_role
+before insert or update of role on public.profiles
+for each row execute function public.mihnati_lock_profile_role();
 drop trigger if exists mihnati_auth_user on auth.users;create trigger mihnati_auth_user after insert on auth.users for each row execute procedure public.mihnati_new_user();
 alter table public.profiles enable row level security;alter table public.jobs enable row level security;alter table public.applications enable row level security;alter table public.projects enable row level security;alter table public.videos enable row level security;alter table public.video_likes enable row level security;
 create policy "profile owner read" on public.profiles for select to authenticated using(id=auth.uid());create policy "profile insert self" on public.profiles for insert to authenticated with check(id=auth.uid());create policy "profile update self" on public.profiles for update to authenticated using(id=auth.uid()) with check(id=auth.uid());
