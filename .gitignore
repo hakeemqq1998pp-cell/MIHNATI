@@ -1,6 +1,4 @@
-node_modules
-dist
+config.js
 .env
 .env.*
-!.env.example
 .DS_Store
